@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>เมทินีคลินิก Dashboard (Online Version)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Sarabun', sans-serif; background-color: #f8fafc; color: #1e293b; }
+        .card { background: white; border-radius: 1rem; border: 1px solid #e2e8f0; transition: transform 0.2s; }
+        .gradient-header { background: linear-gradient(135deg, #059669 0%, #10b981 100%); }
+        .btn-primary { background-color: #10b981; color: white; padding: 0.5rem 1.5rem; border-radius: 0.5rem; font-weight: 600; transition: all 0.2s; }
+        .btn-primary:hover { background-color: #059669; transform: translateY(-1px); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+        .form-input { border: 1px solid #cbd5e1; border-radius: 0.5rem; padding: 0.5rem 0.75rem; width: 100%; font-size: 0.875rem; transition: border-color 0.2s; }
+        .form-input:focus { border-color: #10b981; outline: none; ring: 2px ring-emerald-100; }
+        .section-title { border-left: 4px solid #10b981; padding-left: 0.75rem; color: #065f46; font-weight: bold; margin: 1.5rem 0 1rem 0; }
+        .tab-btn { padding: 0.75rem 1.5rem; font-weight: 600; color: #64748b; border-bottom: 2px solid transparent; transition: all 0.2s; }
+        .tab-btn.active { color: #10b981; border-bottom-color: #10b981; }
+    </style>
+</head>
+<body class="bg-slate-50 min-h-screen">
+    <div class="max-w-[1400px] mx-auto p-4 md:p-6">
+        <!-- Header -->
+        <header class="gradient-header rounded-2xl p-6 text-white mb-6 shadow-md flex flex-col md:flex-row justify-between items-center">
+            <div class="flex items-center gap-4">
+                <div class="bg-white/20 p-3 rounded-full">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>
+                </div>
+                <div>
+                    <h1 class="text-2xl font-bold">เมทินีคลินิกการพยาบาล</h1>
+                    <p class="text-emerald-50 text-sm">ระบบออนไลน์จัดการข้อมูลผู้รับบริการ</p>
+                </div>
+            </div>
+            <div class="mt-4 md:mt-0 text-right">
+                <div id="clock" class="text-xl font-mono font-bold">00:00:00</div>
+                <div id="date" class="text-sm opacity-90">1 มกราคม 2567</div>
+            </div>
+        </header>
+
+        <!-- Navigation -->
+        <nav class="flex border-b border-gray-200 mb-6 bg-white rounded-t-xl px-4 sticky top-0 z-50 overflow-x-auto">
+            <button onclick="switchTab('overview')" id="tab-overview" class="tab-btn active">แดชบอร์ด</button>
+            <button onclick="switchTab('entry')" id="tab-entry" class="tab-btn">ลงทะเบียนผู้ป่วย</button>
+            <button onclick="switchTab('database')" id="tab-database" class="tab-btn">ฐานข้อมูล</button>
+        </nav>
+
+        <!-- Tab: Overview -->
+        <div id="content-overview" class="tab-content space-y-6">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div class="card p-5 border-l-4 border-l-emerald-500">
+                    <p class="text-gray-500 text-xs font-bold uppercase">วันนี้</p>
+                    <h3 class="text-3xl font-bold" id="stat-today">0</h3>
+                </div>
+                <div class="card p-5 border-l-4 border-l-blue-500">
+                    <p class="text-gray-500 text-xs font-bold uppercase">รวมทั้งหมด</p>
+                    <h3 class="text-3xl font-bold" id="stat-total">0</h3>
+                </div>
+                <div class="card p-5 border-l-4 border-l-orange-500">
+                    <p class="text-gray-500 text-xs font-bold uppercase">อุณหภูมิเฉลี่ย</p>
+                    <h3 class="text-3xl font-bold">36.5</h3>
+                </div>
+                <div class="card p-5 border-l-4 border-l-purple-500">
+                    <p class="text-gray-500 text-xs font-bold uppercase">สิทธิบัตรทอง</p>
+                    <h3 class="text-3xl font-bold" id="stat-gold">0</h3>
+                </div>
+            </div>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div class="card p-6"><canvas id="weeklyChart"></canvas></div>
+                <div class="card p-6"><canvas id="rightsChart"></canvas></div>
+            </div>
+        </div>
+
+        <!-- Tab: Entry -->
+        <div id="content-entry" class="tab-content hidden">
+            <div class="card p-8">
+                <form id="patientForm" class="space-y-6">
+                    <div class="section-title">1. ข้อมูลพื้นฐาน</div>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="md:col-span-2">
+                            <label class="block text-xs font-bold text-gray-400 mb-1">ชื่อ-นามสกุล</label>
+                            <input type="text" id="fullname" class="form-input" required>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-400 mb-1">เลขบัตรประชาชน (CID)</label>
+                            <input type="text" id="cid" class="form-input" maxlength="13">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-400 mb-1">HN</label>
+                            <input type="text" id="hn" class="form-input">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-400 mb-1">อายุ</label>
+                            <input type="number" id="age" class="form-input">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-400 mb-1">เพศ</label>
+                            <select id="gender" class="form-input"><option>ชาย</option><option>หญิง</option></select>
+                        </div>
+                    </div>
+
+                    <div class="section-title">2. ที่อยู่และสิทธิ</div>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="md:col-span-1">
+                            <label class="block text-xs font-bold text-gray-400 mb-1">บ้านเลขที่/หมู่</label>
+                            <input type="text" id="addr_house" class="form-input">
+                        </div>
+                        <div class="grid grid-cols-2 gap-2 md:col-span-2">
+                            <input type="text" id="addr_tambon" class="form-input" placeholder="ตำบล">
+                            <input type="text" id="addr_amphoe" class="form-input" placeholder="อำเภอ">
+                        </div>
+                        <input type="text" id="addr_province" class="form-input" placeholder="จังหวัด">
+                        <input type="text" id="phone" class="form-input" placeholder="เบอร์โทรศัพท์">
+                        <select id="right" class="form-input">
+                            <option>จ่ายเงินเอง</option><option>บัตรทอง</option><option>ข้าราชการ</option><option>ประกันสังคม</option>
+                        </select>
+                    </div>
+
+                    <div class="section-title">3. อาการและสัญญาณชีพ</div>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <input type="text" id="bp" class="form-input" placeholder="ความดัน (BP)">
+                        <input type="number" id="weight" class="form-input" placeholder="น้ำหนัก (kg)">
+                        <div class="md:col-span-3 grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <textarea id="cc" rows="2" class="form-input" placeholder="อาการสำคัญ (CC)"></textarea>
+                            <textarea id="dx" rows="2" class="form-input" placeholder="วินิจฉัย (DX)"></textarea>
+                            <textarea id="rx" rows="2" class="form-input border-emerald-300" placeholder="การรักษา (RX)"></textarea>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-end gap-3 border-t pt-6">
+                        <button type="button" onclick="this.form.reset()" class="px-6 py-2 text-gray-400">ล้างข้อมูล</button>
+                        <button type="submit" class="btn-primary">บันทึกเข้าสู่ระบบ</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Tab: Database -->
+        <div id="content-database" class="tab-content hidden space-y-4">
+            <div class="flex flex-col md:flex-row justify-between gap-4">
+                <input type="text" id="searchInput" onkeyup="filterTable()" class="form-input max-w-md" placeholder="🔍 ค้นหาตามชื่อ, HN, CID...">
+                <div class="flex gap-2">
+                    <input type="file" id="csvFileInput" accept=".csv" class="hidden" onchange="importCSV(event)">
+                    <button onclick="document.getElementById('csvFileInput').click()" class="px-4 py-2 bg-blue-50 text-blue-700 rounded-lg text-sm font-bold">นำเข้า CSV</button>
+                    <button onclick="exportToCSV()" class="px-4 py-2 bg-emerald-50 text-emerald-700 rounded-lg text-sm font-bold">ส่งออก CSV</button>
+                </div>
+            </div>
+            <div class="card overflow-x-auto">
+                <table class="w-full text-left" id="patientTable">
+                    <thead class="bg-slate-50 text-xs text-gray-500 uppercase">
+                        <tr>
+                            <th class="p-4">วัน/เวลา</th>
+                            <th class="p-4">HN / CID / ชื่อ</th>
+                            <th class="p-4">สิทธิ/ข้อมูลกายภาพ</th>
+                            <th class="p-4">การรักษา</th>
+                            <th class="p-4 text-center">จัดการ</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody" class="divide-y text-sm"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div id="toast" class="fixed bottom-5 right-5 translate-y-20 opacity-0 transition-all bg-gray-900 text-white px-6 py-3 rounded-xl shadow-xl z-[100]">บันทึกสำเร็จ</div>
+
+    <script>
+        // --- System Logic ---
+        let patients = JSON.parse(localStorage.getItem('clinic_online_data')) || [];
+
+        function save() {
+            localStorage.setItem('clinic_online_data', JSON.stringify(patients));
+            updateStats();
+            renderTable();
+        }
+
+        // --- Clock ---
+        setInterval(() => {
+            const now = new Date();
+            document.getElementById('clock').innerText = now.toLocaleTimeString('th-TH');
+            document.getElementById('date').innerText = now.toLocaleDateString('th-TH', { day:'numeric', month:'long', year:'numeric' });
+        }, 1000);
+
+        // --- Tabs ---
+        function switchTab(id) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+            document.getElementById('content-'+id).classList.remove('hidden');
+            document.getElementById('tab-'+id).classList.add('active');
+            if(id === 'overview') updateCharts();
+        }
+
+        // --- Form Submission ---
+        document.getElementById('patientForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const data = {
+                id: Date.now(),
+                timestamp: new Date().toLocaleString('th-TH'),
+                date: new Date().toISOString().split('T')[0],
+                fullname: document.getElementById('fullname').value,
+                cid: document.getElementById('cid').value,
+                hn: document.getElementById('hn').value,
+                age: document.getElementById('age').value,
+                gender: document.getElementById('gender').value,
+                addr: `${document.getElementById('addr_house').value} ${document.getElementById('addr_tambon').value} ${document.getElementById('addr_amphoe').value} ${document.getElementById('addr_province').value}`,
+                right: document.getElementById('right').value,
+                bp: document.getElementById('bp').value,
+                weight: document.getElementById('weight').value,
+                cc: document.getElementById('cc').value,
+                dx: document.getElementById('dx').value,
+                rx: document.getElementById('rx').value
+            };
+            patients.unshift(data);
+            save();
+            e.target.reset();
+            showToast("บันทึกเรียบร้อย");
+            setTimeout(() => switchTab('database'), 500);
+        });
+
+        function renderTable() {
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = patients.map(p => `
+                <tr class="hover:bg-slate-50 transition">
+                    <td class="p-4 text-xs text-gray-400 font-mono">${p.timestamp}</td>
+                    <td class="p-4">
+                        <div class="font-bold">${p.fullname}</div>
+                        <div class="text-[10px] text-emerald-600 font-bold">HN: ${p.hn} | CID: ${p.cid}</div>
+                    </td>
+                    <td class="p-4">
+                        <div class="text-xs">${p.right}</div>
+                        <div class="text-[10px] text-blue-500">BP: ${p.bp} | ${p.age}ปี</div>
+                    </td>
+                    <td class="p-4">
+                        <div class="text-xs text-gray-500 italic">DX: ${p.dx}</div>
+                        <div class="font-bold text-emerald-700">${p.rx}</div>
+                    </td>
+                    <td class="p-4 text-center">
+                        <button onclick="deleteRow(${p.id})" class="text-red-300 hover:text-red-500">ลบ</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function deleteRow(id) {
+            if(confirm("ยืนยันการลบ?")) {
+                patients = patients.filter(p => p.id !== id);
+                save();
+            }
+        }
+
+        function updateStats() {
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('stat-today').innerText = patients.filter(p => p.date === today).length;
+            document.getElementById('stat-total').innerText = patients.length;
+            document.getElementById('stat-gold').innerText = patients.filter(p => p.right === 'บัตรทอง').length;
+        }
+
+        function showToast(m) {
+            const t = document.getElementById('toast');
+            t.innerText = m;
+            t.classList.remove('translate-y-20', 'opacity-0');
+            setTimeout(() => t.classList.add('translate-y-20', 'opacity-0'), 2500);
+        }
+
+        // --- Charts & Tools ---
+        let ch1, ch2;
+        function updateCharts() {
+            if(ch1) ch1.destroy();
+            ch1 = new Chart(document.getElementById('weeklyChart'), {
+                type:'line', data:{ labels:['7วัน','6วัน','5วัน','4วัน','3วัน','2วัน','วันนี้'], datasets:[{label:'คนไข้', data:[2,5,3,8,4,6, patients.length], borderColor:'#10b981'}]}
+            });
+            if(ch2) ch2.destroy();
+            ch2 = new Chart(document.getElementById('rightsChart'), {
+                type:'pie', data:{ labels:['บัตรทอง','จ่ายเอง'], datasets:[{data:[patients.filter(p=>p.right==='บัตรทอง').length, patients.filter(p=>p.right==='จ่ายเงินเอง').length], backgroundColor:['#10b981','#3b82f6']}]}
+            });
+        }
+
+        function exportToCSV() {
+            let csv = "\uFEFFวัน/เวลา,CID,HN,ชื่อ,ที่อยู่,สิทธิ,วินิจฉัย,การรักษา\n";
+            patients.forEach(p => { csv += `"${p.timestamp}","${p.cid}","${p.hn}","${p.fullname}","${p.addr}","${p.right}","${p.dx}","${p.rx}"\n`; });
+            const blob = new Blob([csv], { type:'text/csv;charset=utf-8;' });
+            const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download='clinic_data.csv'; a.click();
+        }
+
+        function importCSV(e) {
+            const reader = new FileReader();
+            reader.onload = function(ev) {
+                const rows = ev.target.result.split('\n').slice(1);
+                rows.forEach(r => {
+                    if(r.trim()) {
+                        const c = r.split(',').map(x => x.replace(/"/g, ''));
+                        patients.unshift({ id:Date.now(), timestamp:c[0], cid:c[1], hn:c[2], fullname:c[3], addr:c[4], right:c[5], dx:c[6], rx:c[7], date:new Date().toISOString().split('T')[0] });
+                    }
+                });
+                save();
+                showToast("นำเข้าสำเร็จ");
+            };
+            reader.readAsText(e.target.files[0], 'UTF-8');
+        }
+
+        updateStats();
+        updateCharts();
+        renderTable();
+    </script>
+</body>
+</html>
